@@ -196,54 +196,9 @@ export const recordSale = async (req, res) => {
       status: "existing-stock",
     });
 
-    // If there is no existing stock, check for existing stock of the previous day
+    // If there is no existing stock, return a 404 error
     if (!existingStock) {
-      const previousDate = new Date(currentDate);
-      previousDate.setDate(previousDate.getDate() - 1);
-      const previousStock = await Stock.findOne({
-        date: previousDate.toISOString().split("T")[0],
-        tyreSize,
-        status: "existing-stock",
-      });
-
-      if (previousStock) {
-        // Create a new existing-stock record from the previous day's stock
-        existingStock = new Stock({
-          date: currentDate.toISOString().split("T")[0],
-          status: "existing-stock",
-          quantity: previousStock.quantity,
-          tyreSize: previousStock.tyreSize,
-          SSP: previousStock.SSP,
-          totalAmount: previousStock.totalAmount,
-          pricePerUnit: previousStock.pricePerUnit,
-          location: previousStock.location,
-        });
-        await existingStock.save();
-      } else {
-        // If there is no previous day's stock, check for open stock
-        const openStock = await Stock.findOne({
-          date: currentDate.toISOString().split("T")[0],
-          tyreSize,
-          status: "open-stock",
-        });
-
-        if (openStock) {
-          // Create a new existing-stock record from the open stock
-          existingStock = new Stock({
-            date: currentDate.toISOString().split("T")[0],
-            status: "existing-stock",
-            quantity: openStock.quantity,
-            tyreSize: openStock.tyreSize,
-            SSP: openStock.SSP,
-            totalAmount: openStock.totalAmount,
-            pricePerUnit: openStock.pricePerUnit,
-            location: openStock.location,
-          });
-          await existingStock.save();
-        } else {
-          return res.status(404).json({ message: "Item not found in stock" });
-        }
-      }
+      return res.status(404).json({ message: "Item not found in stock" });
     }
 
     // Calculate the total amount based on quantity and price per unit
