@@ -80,6 +80,19 @@ export const addStock = async (req, res) => {
           location,
         });
         await newStock.save();
+
+        // Create a corresponding existing-stock record
+        const existingStock = new Stock({
+          date: new Date(date).toISOString().split("T")[0],
+          status: "existing-stock",
+          quantity,
+          tyreSize,
+          SSP,
+          totalAmount,
+          pricePerUnit,
+          location,
+        });
+        await existingStock.save();
       }
     }
 
