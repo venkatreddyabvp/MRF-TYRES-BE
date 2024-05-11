@@ -181,89 +181,87 @@ export const recordSale = async (req, res) => {
     } = req.body;
     const { role, id: userId } = req.user;
 
-    console.log("Request Body:", req.body);
-    console.log("User Role:", role);
-
     // Check if the user has the owner or worker role
     if (!["owner", "worker"].includes(role)) {
-      console.log("Forbidden: User role is not owner or worker");
       return res.status(403).json({ message: "Forbidden" });
     }
 
     // Parse the date or use the current date if not provided
     const currentDate = date ? new Date(date) : new Date();
-    console.log("Current Date:", currentDate);
 
-    // Check if the item exists in the stock for the given tyreSize
-    let stock = await Stock.findOne({
+    // Check if there is existing stock for the current date and tyreSize
+    let existingStock = await Stock.findOne({
       date: currentDate.toISOString().split("T")[0],
       tyreSize,
+      status: "existing-stock",
     });
 
-    console.log("Stock:", stock);
-
-    if (!stock) {
-      console.log("Item not found in stock");
-
-      // Check if there is existing stock with the same tyreSize and open-stock status
-      const openStock = await Stock.findOne({
-        date: currentDate.toISOString().split("T")[0],
+    // If there is no existing stock, check for existing stock of the previous day
+    if (!existingStock) {
+      const previousDate = new Date(currentDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const previousStock = await Stock.findOne({
+        date: previousDate.toISOString().split("T")[0],
         tyreSize,
-        status: "open-stock",
+        status: "existing-stock",
       });
 
-      if (openStock) {
-        // Create a new record for existing-stock
-        openStock.quantity -= quantity;
-        openStock.totalAmount -= quantity * openStock.pricePerUnit;
-        await openStock.save();
-        console.log("Open Stock Updated:", openStock);
-
-        // Create a new record for existing-stock
-        stock = new Stock({
-          date: currentDate,
+      if (previousStock) {
+        // Create a new existing-stock record from the previous day's stock
+        existingStock = new Stock({
+          date: currentDate.toISOString().split("T")[0],
           status: "existing-stock",
-          quantity,
-          tyreSize: openStock.tyreSize,
-          SSP: openStock.SSP,
-          totalAmount: quantity * openStock.pricePerUnit,
-          pricePerUnit: openStock.pricePerUnit,
-          location: openStock.location,
+          quantity: previousStock.quantity,
+          tyreSize: previousStock.tyreSize,
+          SSP: previousStock.SSP,
+          totalAmount: previousStock.totalAmount,
+          pricePerUnit: previousStock.pricePerUnit,
+          location: previousStock.location,
         });
-        await stock.save();
-        console.log("New Stock Record:", stock);
+        await existingStock.save();
       } else {
-        return res.status(404).json({ message: "Item not found in stock" });
+        // If there is no previous day's stock, check for open stock
+        const openStock = await Stock.findOne({
+          date: currentDate.toISOString().split("T")[0],
+          tyreSize,
+          status: "open-stock",
+        });
+
+        if (openStock) {
+          // Create a new existing-stock record from the open stock
+          existingStock = new Stock({
+            date: currentDate.toISOString().split("T")[0],
+            status: "existing-stock",
+            quantity: openStock.quantity,
+            tyreSize: openStock.tyreSize,
+            SSP: openStock.SSP,
+            totalAmount: openStock.totalAmount,
+            pricePerUnit: openStock.pricePerUnit,
+            location: openStock.location,
+          });
+          await existingStock.save();
+        } else {
+          return res.status(404).json({ message: "Item not found in stock" });
+        }
       }
     }
 
     // Calculate the total amount based on quantity and price per unit
     const totalAmount = quantity * pricePerUnit;
 
-    console.log("Total Amount:", totalAmount);
-
     // Check if the requested quantity is available in existing stock
-    if (stock.status === "existing-stock" && stock.quantity < quantity) {
-      console.log("Insufficient stock quantity");
+    if (existingStock.quantity < quantity) {
       return res.status(400).json({ message: "Insufficient stock quantity" });
     }
 
-    // Update the existing-stock record if it exists
-    const existingStock = await Stock.findOne({
-      date: currentDate.toISOString().split("T")[0],
-      status: "existing-stock",
-      tyreSize,
-    });
-    if (existingStock) {
-      existingStock.quantity -= quantity;
-      existingStock.totalAmount -= totalAmount;
-      await existingStock.save();
-      console.log("Existing Stock Updated:", existingStock);
-    }
+    // Update the existing-stock record with the new quantity and total amount
+    existingStock.quantity -= quantity;
+    existingStock.totalAmount -= totalAmount;
+    await existingStock.save();
 
     // Create a new sales record
     const newSale = new Sales({
-      date: currentDate,
+      date: currentDate.toISOString().split("T")[0],
       quantity,
       totalAmount,
       customerName,
@@ -272,29 +270,15 @@ export const recordSale = async (req, res) => {
       tyreSize,
       user: userId,
     });
-
-    console.log("New Sale Record:", newSale);
-
-    // Save the sales record
     await newSale.save();
 
-    // Subtract quantity from stock and update total amount
-    stock.quantity -= quantity;
-    stock.totalAmount += totalAmount;
-
-    console.log("Updated Stock:", stock);
-
-    // Save the updated stock
-    await stock.save();
-
-    // Send email notification
     // Send email notification with stock details
     const emailOptions = {
       from: "venkatreddyabvp2@gmail.com",
       to: "venkatreddyabvp2@gmail.com",
       subject: "Stock Update Notification",
-      text: `Stock updated successfully. Details: Date: ${stock.date}, Tyre Size: ${stock.tyreSize}, Quantity: ${stock.quantity}, Total Amount: ${stock.totalAmount}`,
-      html: `<p>Stock updated successfully.</p><p>Details:</p><ul><li>Date: ${stock.date}</li><li>Tyre Size: ${stock.tyreSize}</li><li>Quantity: ${stock.quantity}</li><li>Total Amount: ${stock.totalAmount}</li></ul>`,
+      text: `Stock updated successfully. Details: Date: ${existingStock.date}, Tyre Size: ${existingStock.tyreSize}, Quantity: ${existingStock.quantity}, Total Amount: ${existingStock.totalAmount}`,
+      html: `<p>Stock updated successfully.</p><p>Details:</p><ul><li>Date: ${existingStock.date}</li><li>Tyre Size: ${existingStock.tyreSize}</li><li>Quantity: ${existingStock.quantity}</li><li>Total Amount: ${existingStock.totalAmount}</li></ul>`,
     };
     await sendEmail(emailOptions);
 
