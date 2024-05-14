@@ -1,5 +1,5 @@
 import User from "../models/user-model.js";
-
+import jwt from "jsonwebtoken";
 const createUser = async (req, res) => {
   const { username, password, location, role, phoneNumber } = req.body;
   try {
@@ -11,6 +11,8 @@ const createUser = async (req, res) => {
   }
 };
 
+import jwt from "jsonwebtoken";
+
 const login = async (req, res) => {
   const { phoneNumber, password } = req.body;
   try {
@@ -20,7 +22,15 @@ const login = async (req, res) => {
         .status(401)
         .json({ message: "Invalid phoneNumber or password." });
     }
-    res.status(200).json({ message: "Login successful.", user });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }, // Token expires in 1 hour
+    );
+
+    res.status(200).json({ message: "Login successful.", user, token });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
