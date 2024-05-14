@@ -3,19 +3,39 @@ import jwt from "jsonwebtoken";
 const createUser = async (req, res) => {
   const { username, password, location, role, phoneNumber } = req.body;
   try {
+    // Check if user already exists
+    const existingUser = await User.findOne({ phoneNumber });
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ message: "User with this phone number already exists." });
+    }
+
+    // Create new user
     const user = new User({ username, password, location, role, phoneNumber });
     await user.save();
     res.status(201).json({ message: "User created successfully." });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error(err); // Log the error for debugging
+    res
+      .status(400)
+      .json({ message: "An error occurred while creating the user." });
   }
 };
 
 const login = async (req, res) => {
   const { phoneNumber, password } = req.body;
   try {
-    const user = await User.findOne({ phoneNumber, password });
+    const user = await User.findOne({ phoneNumber });
     if (!user) {
+      return res
+        .status(401)
+        .json({ message: "Invalid phoneNumber or password." });
+    }
+
+    // Verify password
+    const isPasswordValid = await user.isValidPassword(password);
+    if (!isPasswordValid) {
       return res
         .status(401)
         .json({ message: "Invalid phoneNumber or password." });
