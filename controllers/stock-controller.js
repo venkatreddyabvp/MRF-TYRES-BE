@@ -47,6 +47,32 @@ export const addStock = async (req, res) => {
       previousStock.quantity += quantity;
       previousStock.totalAmount += totalAmount;
       await previousStock.save();
+
+      // Create a new open-stock for the current date based on the previous day's open-stock
+      const newOpenStock = new Stock({
+        date: new Date(date).toISOString().split("T")[0],
+        status: "open-stock",
+        quantity: previousStock.quantity,
+        tyreSize,
+        SSP: previousStock.SSP,
+        totalAmount: previousStock.totalAmount,
+        pricePerUnit: previousStock.pricePerUnit,
+        location: previousStock.location,
+      });
+      await newOpenStock.save();
+
+      // Create a new existing-stock based on the new open-stock and add the new stock
+      const newExistingStock = new Stock({
+        date: new Date(date).toISOString().split("T")[0],
+        status: "existing-stock",
+        quantity: previousStock.quantity + quantity,
+        tyreSize,
+        SSP: previousStock.SSP,
+        totalAmount: previousStock.totalAmount + totalAmount,
+        pricePerUnit: previousStock.pricePerUnit,
+        location: previousStock.location,
+      });
+      await newExistingStock.save();
     } else {
       // If there is no existing-stock for the previous date, create one from previous day's open-stock
       const previousOpenStock = await Stock.findOne({
@@ -104,6 +130,7 @@ export const addStock = async (req, res) => {
       .json({ message: "Failed to update stock", error: err.message });
   }
 };
+
 //updating the stock__________________________________________________
 export const updateOpenStock = async (req, res) => {
   try {
