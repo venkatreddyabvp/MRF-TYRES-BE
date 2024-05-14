@@ -66,7 +66,7 @@ router.get(
 );
 
 router.post("/create-user", createUser);
-router.post("/worker-login", login);
+router.post("/worker-login", authenticate(["owner", "worker"]), login);
 router.get("/workers", getAllWorkers);
 router.put("/:userId", updateUser);
 router.delete("/:userId", deleteUser);
