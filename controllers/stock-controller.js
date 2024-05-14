@@ -291,6 +291,7 @@ export const recordSale = async (req, res) => {
       date: currentDate.toISOString().split("T")[0],
       quantity,
       totalAmount,
+      pricePerUnit,
       customerName,
       phoneNumber,
       comment,
@@ -402,18 +403,10 @@ export const getExistingStock = async (req, res) => {
   try {
     // Find all "existing-stock" records for the current date
     const currentDate = new Date().toISOString().split("T")[0];
-    let existingStock = await Stock.find({
+    const existingStock = await Stock.find({
       date: currentDate,
       status: "existing-stock",
     });
-
-    // If there are no existing-stock records for the current date, find open-stock records
-    if (existingStock.length === 0) {
-      existingStock = await Stock.find({
-        date: currentDate,
-        status: "open-stock",
-      });
-    }
 
     res.status(200).json({ existingStock });
   } catch (err) {

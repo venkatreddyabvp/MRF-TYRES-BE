@@ -16,6 +16,15 @@ import {
   createSpecialOrder,
   getSpecialOrders,
 } from "../controllers/specialOrder-controller.js";
+
+import {
+  createUser,
+  login,
+  getAllWorkers,
+  updateUser,
+  deleteUser,
+} from "../controllers/user-controller.js";
+
 const router = express.Router();
 
 // Stock routes
@@ -45,10 +54,6 @@ router.get("/open-stock-days", getOpenStockDays);
 router.post("/owner/signup", signupOwner);
 router.post("/owner/login", loginOwner);
 
-// Worker routes
-router.post("/worker/signup", signupWorker);
-router.post("/worker/login", loginWorker);
-
 router.post(
   "/special-reports",
   authenticate(["owner", "worker"]),
@@ -59,5 +64,11 @@ router.get(
 
   getSpecialOrders,
 );
+
+router.post("/create-user", authenticate("owner"), createUser);
+router.post("/worker-login", authenticate("worker"), login);
+router.get("/workers", authenticate("owner"), getAllWorkers);
+router.put("/:userId", authenticate("owner"), updateUser);
+router.delete("/:userId", authenticate("owner"), deleteUser);
 
 export default router;

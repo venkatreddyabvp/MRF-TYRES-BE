@@ -1,4 +1,3 @@
-// models/User.js
 import { Schema, model } from "mongoose";
 
 const userSchema = new Schema({
@@ -14,10 +13,6 @@ const userSchema = new Schema({
   location: {
     type: String,
     required: true,
-  },
-  isAdmin: {
-    type: Boolean,
-    default: false,
   },
 });
 
