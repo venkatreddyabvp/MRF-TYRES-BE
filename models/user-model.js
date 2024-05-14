@@ -14,6 +14,11 @@ const userSchema = new Schema({
     type: String,
     required: true,
   },
+  role: {
+    type: String,
+    enum: ["owner", "worker"],
+    required: true,
+  },
 });
 
 const User = model("User", userSchema);
