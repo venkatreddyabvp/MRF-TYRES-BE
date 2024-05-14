@@ -65,10 +65,10 @@ router.get(
   getSpecialOrders,
 );
 
-router.post("/create-user", authenticate(["owner"]), createUser);
-router.post("/worker-login", authenticate(["worker"]), login);
-router.get("/workers", authenticate(["owner"]), getAllWorkers);
-router.put("/:userId", authenticate(["owner"]), updateUser);
-router.delete("/:userId", authenticate(["owner"]), deleteUser);
+router.post("/create-user", createUser);
+router.post("/worker-login", login);
+router.get("/workers", getAllWorkers);
+router.put("/:userId", updateUser);
+router.delete("/:userId", deleteUser);
 
 export default router;
