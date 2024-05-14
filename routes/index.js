@@ -16,15 +16,6 @@ import {
   createSpecialOrder,
   getSpecialOrders,
 } from "../controllers/specialOrder-controller.js";
-
-import {
-  createUser,
-  login,
-  getAllWorkers,
-  updateUser,
-  deleteUser,
-} from "../controllers/user-controller.js";
-
 const router = express.Router();
 
 // Stock routes
@@ -68,20 +59,5 @@ router.get(
 
   getSpecialOrders,
 );
-
-// Create a new user
-router.post("/create-user", createUser);
-
-// User login
-router.post("/login", login);
-
-// Get all workers
-router.get("/workers", getAllWorkers);
-
-// Update a user
-router.put("/:userId", updateUser);
-
-// Delete a user
-router.delete("/:userId", deleteUser);
 
 export default router;
