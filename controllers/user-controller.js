@@ -1,9 +1,9 @@
 import User from "../models/user-model.js";
 
 const createUser = async (req, res) => {
-  const { username, password, location, role } = req.body;
+  const { username, password, location, role, phoneNumber } = req.body;
   try {
-    const user = new User({ username, password, location, role });
+    const user = new User({ username, password, location, role, phoneNumber });
     await user.save();
     res.status(201).json({ message: "User created successfully." });
   } catch (err) {
@@ -12,11 +12,13 @@ const createUser = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { username, password } = req.body;
+  const { phoneNumber, password } = req.body;
   try {
-    const user = await User.findOne({ username, password });
+    const user = await User.findOne({ phoneNumber, password });
     if (!user) {
-      return res.status(401).json({ message: "Invalid username or password." });
+      return res
+        .status(401)
+        .json({ message: "Invalid phoneNumber or password." });
     }
     res.status(200).json({ message: "Login successful.", user });
   } catch (err) {
@@ -35,13 +37,14 @@ const getAllWorkers = async (req, res) => {
 
 const updateUser = async (req, res) => {
   const { userId } = req.params;
-  const { username, password, location, role } = req.body;
+  const { username, password, location, role, phoneNumber } = req.body;
   try {
     await User.findByIdAndUpdate(userId, {
       username,
       password,
       location,
       role,
+      phoneNumber,
     });
     res.status(200).json({ message: "User updated successfully." });
   } catch (err) {
