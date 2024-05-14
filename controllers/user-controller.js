@@ -11,8 +11,6 @@ const createUser = async (req, res) => {
   }
 };
 
-import jwt from "jsonwebtoken";
-
 const login = async (req, res) => {
   const { phoneNumber, password } = req.body;
   try {
