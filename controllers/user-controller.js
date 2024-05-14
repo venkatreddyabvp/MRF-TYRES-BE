@@ -1,5 +1,7 @@
 import User from "../models/user-model.js";
 import jwt from "jsonwebtoken";
+import argon2 from "argon2";
+
 const createUser = async (req, res) => {
   const { username, password, location, role, phoneNumber } = req.body;
   try {
@@ -12,7 +14,14 @@ const createUser = async (req, res) => {
     }
 
     // Create new user
-    const user = new User({ username, password, location, role, phoneNumber });
+    const hashedPassword = await argon2.hash(password);
+    const user = new User({
+      username,
+      password: hashedPassword,
+      location,
+      role,
+      phoneNumber,
+    });
     await user.save();
     res.status(201).json({ message: "User created successfully." });
   } catch (err) {
@@ -34,7 +43,7 @@ const login = async (req, res) => {
     }
 
     // Verify password
-    const isPasswordValid = await user.isValidPassword(password);
+    const isPasswordValid = await argon2.verify(user.password, password);
     if (!isPasswordValid) {
       return res
         .status(401)
@@ -67,9 +76,10 @@ const updateUser = async (req, res) => {
   const { userId } = req.params;
   const { username, password, location, role, phoneNumber } = req.body;
   try {
+    const hashedPassword = await argon2.hash(password);
     await User.findByIdAndUpdate(userId, {
       username,
-      password,
+      password: hashedPassword,
       location,
       role,
       phoneNumber,
