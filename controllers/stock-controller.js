@@ -499,24 +499,41 @@ export const getClosingStock = async (req, res) => {
       status: "closing-stock",
     });
 
-    // If there is no closing stock for the previous date, find the last open stock record from the previous date and create a copy as closing stock
+    // If there is no closing stock for the previous date, find the last existing stock record from the previous date and create a copy as closing stock
     if (closingStock.length === 0) {
-      const lastOpenStock = await Stock.findOne({
+      const lastExistingStock = await Stock.findOne({
         date: previousDate.toISOString().split("T")[0],
-        status: "open-stock",
-      }).sort({ createdAt: -1 });
+        status: "existing-stock",
+      });
 
-      if (lastOpenStock) {
-        // Create a copy of the last open stock record with status as "closing-stock"
+      if (lastExistingStock) {
+        // Create a copy of the last existing stock record with status as "closing-stock"
         const newStock = new Stock({
-          ...lastOpenStock.toObject(),
+          ...lastExistingStock.toObject(),
           status: "closing-stock",
         });
-        newStock.location = lastOpenStock.location; // Set location from the last open stock record
         await newStock.save();
 
         // Retrieve the newly created closing-stock record
         closingStock = [newStock];
+      } else {
+        // If there is no existing stock for the previous date, find the last open stock record from the previous date and create a copy as closing stock
+        const lastOpenStock = await Stock.findOne({
+          date: previousDate.toISOString().split("T")[0],
+          status: "open-stock",
+        });
+
+        if (lastOpenStock) {
+          // Create a copy of the last open stock record with status as "closing-stock"
+          const newStock = new Stock({
+            ...lastOpenStock.toObject(),
+            status: "closing-stock",
+          });
+          await newStock.save();
+
+          // Retrieve the newly created closing-stock record
+          closingStock = [newStock];
+        }
       }
     }
 
