@@ -19,27 +19,33 @@ export const addStock = async (req, res) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    // Check if there is existing open stock for the current date with the same tyreSize
+    if (!location) {
+      return res.status(400).json({ message: "Location is required" });
+    }
+
+    // Check if there is existing open stock for the current date with the same tyreSize and location
     const existingOpenStock = await Stock.findOne({
       date: new Date(date).toISOString().split("T")[0],
       tyreSize,
       status: "open-stock",
+      location,
     });
 
     if (existingOpenStock) {
       return res.status(400).json({
         message:
-          "Open stock already exists for this tyreSize. Please update the existing open stock.",
+          "Open stock already exists for this tyreSize and location. Please update the existing open stock.",
       });
     }
 
-    // Check if there is existing stock with the same tyreSize and previous date
+    // Check if there is existing stock with the same tyreSize, location, and previous date
     const previousDate = new Date(date);
     previousDate.setDate(previousDate.getDate() - 1);
     let previousStock = await Stock.findOne({
       date: previousDate.toISOString().split("T")[0],
       tyreSize,
       status: "existing-stock",
+      location,
     });
 
     if (previousStock) {
@@ -57,7 +63,7 @@ export const addStock = async (req, res) => {
         SSP: previousStock.SSP,
         totalAmount: previousStock.totalAmount,
         pricePerUnit: previousStock.pricePerUnit,
-        location: previousStock.location,
+        location,
       });
       await newOpenStock.save();
 
@@ -70,7 +76,7 @@ export const addStock = async (req, res) => {
         SSP: previousStock.SSP,
         totalAmount: previousStock.totalAmount + totalAmount,
         pricePerUnit: previousStock.pricePerUnit,
-        location: previousStock.location,
+        location,
       });
       await newExistingStock.save();
     } else {
@@ -79,6 +85,7 @@ export const addStock = async (req, res) => {
         date: previousDate.toISOString().split("T")[0],
         tyreSize,
         status: "open-stock",
+        location,
       });
 
       if (previousOpenStock) {
@@ -149,7 +156,7 @@ export const updateOpenStock = async (req, res) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    // Find open-stock record with the same tyreSize and date_________________
+    // Find open-stock record with the same tyreSize and date
     let stock = await Stock.findOne({ date, tyreSize, status: "open-stock" });
 
     if (!stock) {
@@ -163,6 +170,7 @@ export const updateOpenStock = async (req, res) => {
       date,
       tyreSize,
       status: "existing-stock",
+      location,
     });
 
     if (!existingStock) {
@@ -194,6 +202,7 @@ export const updateOpenStock = async (req, res) => {
       .json({ message: "Failed to update stock", error: err.message });
   }
 };
+
 //record sale______________________________________
 export const recordSale = async (req, res) => {
   try {
@@ -205,6 +214,7 @@ export const recordSale = async (req, res) => {
       comment,
       tyreSize,
       pricePerUnit,
+      location,
     } = req.body;
     const { role, id: userId } = req.user;
 
@@ -221,6 +231,7 @@ export const recordSale = async (req, res) => {
       date: currentDate.toISOString().split("T")[0],
       tyreSize,
       status: "existing-stock",
+      location,
     });
 
     // If there is no existing stock, check for existing stock of the previous day
@@ -231,6 +242,7 @@ export const recordSale = async (req, res) => {
         date: previousDate.toISOString().split("T")[0],
         tyreSize,
         status: "existing-stock",
+        location,
       });
 
       if (previousStock) {
@@ -252,6 +264,7 @@ export const recordSale = async (req, res) => {
           date: currentDate.toISOString().split("T")[0],
           tyreSize,
           status: "open-stock",
+          location,
         });
 
         if (openStock) {

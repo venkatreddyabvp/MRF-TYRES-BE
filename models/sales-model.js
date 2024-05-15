@@ -9,6 +9,7 @@ const salesSchema = new mongoose.Schema({
   customerName: String,
   user: { type: mongoose.Schema.Types.ObjectId, ref: "Worker" },
   comments: String,
+  location: String,
 });
 
 const Sales = mongoose.model("Sales", salesSchema);
