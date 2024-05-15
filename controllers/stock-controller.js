@@ -437,7 +437,7 @@ export const getExistingStock = async (req, res) => {
       });
 
       if (previousStock.length > 0) {
-        // Create a "closing-stock" record with the same values as existing stock from the previous date
+        // Create a copy of the previous date existing stock and change status to "closing-stock"
         for (const stock of previousStock) {
           const newStock = new Stock({
             date: currentDate,
@@ -499,25 +499,20 @@ export const getClosingStock = async (req, res) => {
       status: "closing-stock",
     });
 
-    // If there is no closing stock for the previous date, find the last existing stock record and convert it to closing stock
+    // If there is no closing stock for the previous date, find the last open stock record from the previous date and create a copy as closing stock
     if (closingStock.length === 0) {
-      const lastExistingStock = await Stock.findOne({
+      const lastOpenStock = await Stock.findOne({
         date: previousDate.toISOString().split("T")[0],
-        status: "existing-stock",
+        status: "open-stock",
       }).sort({ createdAt: -1 });
 
-      if (lastExistingStock) {
-        // Convert the last existing stock record to closing stock
+      if (lastOpenStock) {
+        // Create a copy of the last open stock record with status as "closing-stock"
         const newStock = new Stock({
-          date: previousDate.toISOString().split("T")[0],
+          ...lastOpenStock.toObject(),
           status: "closing-stock",
-          quantity: lastExistingStock.quantity,
-          tyreSize: lastExistingStock.tyreSize,
-          SSP: lastExistingStock.SSP,
-          totalAmount: lastExistingStock.totalAmount,
-          pricePerUnit: lastExistingStock.pricePerUnit,
-          location: lastExistingStock.location,
         });
+        newStock.location = lastOpenStock.location; // Set location from the last open stock record
         await newStock.save();
 
         // Retrieve the newly created closing-stock record
