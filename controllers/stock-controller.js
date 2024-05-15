@@ -490,45 +490,38 @@ export const getSalesRecords = async (req, res) => {
 // controllers/stockController.js
 export const getClosingStock = async (req, res) => {
   try {
-    // Find all "closing-stock" records for the current date
+    // Find all "closing-stock" records for the previous date
     const currentDate = new Date().toISOString().split("T")[0];
+    const previousDate = new Date(currentDate);
+    previousDate.setDate(previousDate.getDate() - 1);
     let closingStock = await Stock.find({
-      date: currentDate,
+      date: previousDate.toISOString().split("T")[0],
       status: "closing-stock",
     });
 
-    // If there is no closing stock, find the last updated existing-stock from the previous date
+    // If there is no closing stock for the previous date, find the last existing stock record and convert it to closing stock
     if (closingStock.length === 0) {
-      const previousDate = new Date(currentDate);
-      previousDate.setDate(previousDate.getDate() - 1);
-      const previousStock = await Stock.find({
+      const lastExistingStock = await Stock.findOne({
         date: previousDate.toISOString().split("T")[0],
         status: "existing-stock",
-      })
-        .sort({ updatedAt: -1 })
-        .limit(1);
+      }).sort({ updatedAt: -1 });
 
-      if (previousStock.length > 0) {
-        // Create a "closing-stock" record with the same values as the last updated existing-stock from the previous date
-        for (const stock of previousStock) {
-          const newStock = new Stock({
-            date: currentDate,
-            status: "closing-stock",
-            quantity: stock.quantity,
-            tyreSize: stock.tyreSize,
-            SSP: stock.SSP,
-            totalAmount: stock.totalAmount,
-            pricePerUnit: stock.pricePerUnit,
-            location: stock.location,
-          });
-          await newStock.save();
-        }
-
-        // Retrieve the newly created closing-stock records
-        closingStock = await Stock.find({
-          date: currentDate,
+      if (lastExistingStock) {
+        // Convert the last existing stock record to closing stock
+        const newStock = new Stock({
+          date: previousDate.toISOString().split("T")[0],
           status: "closing-stock",
+          quantity: lastExistingStock.quantity,
+          tyreSize: lastExistingStock.tyreSize,
+          SSP: lastExistingStock.SSP,
+          totalAmount: lastExistingStock.totalAmount,
+          pricePerUnit: lastExistingStock.pricePerUnit,
+          location: lastExistingStock.location,
         });
+        await newStock.save();
+
+        // Retrieve the newly created closing-stock record
+        closingStock = [newStock];
       }
     }
 
