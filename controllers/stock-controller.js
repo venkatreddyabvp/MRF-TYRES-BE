@@ -490,24 +490,29 @@ export const getSalesRecords = async (req, res) => {
 // controllers/stockController.js
 export const getClosingStock = async (req, res) => {
   try {
-    // Find all "closing-stock" records before the current date
-    const currentDate = new Date().toISOString().split("T")[0];
-    const closingStock = await Stock.find({
-      date: { $lt: currentDate },
-      status: "closing-stock",
-    });
+    // Find all "closing-stock" records
+    const closingStock = await Stock.find({ status: "closing-stock" });
+
+    // Find the earliest and latest dates of closing-stock records
+    const earliestDate = closingStock.length > 0 ? closingStock[0].date : null;
+    const latestDate =
+      closingStock.length > 0
+        ? closingStock[closingStock.length - 1].date
+        : null;
 
     // Check if there are any missing closing-stock records
     const missingClosingStockDates = [];
-    for (
-      let date = new Date(closingStock[0].date);
-      date < new Date(currentDate);
-      date.setDate(date.getDate() + 1)
-    ) {
-      const dateString = date.toISOString().split("T")[0];
-      const found = closingStock.some((stock) => stock.date === dateString);
-      if (!found) {
-        missingClosingStockDates.push(dateString);
+    if (earliestDate && latestDate) {
+      for (
+        let date = new Date(earliestDate);
+        date < new Date(latestDate);
+        date.setDate(date.getDate() + 1)
+      ) {
+        const dateString = date.toISOString().split("T")[0];
+        const found = closingStock.some((stock) => stock.date === dateString);
+        if (!found) {
+          missingClosingStockDates.push(dateString);
+        }
       }
     }
 
@@ -536,11 +541,8 @@ export const getClosingStock = async (req, res) => {
       }
     }
 
-    // Retrieve all closing-stock records before the current date
-    const updatedClosingStock = await Stock.find({
-      date: { $lt: currentDate },
-      status: "closing-stock",
-    });
+    // Retrieve all closing-stock records after updating
+    const updatedClosingStock = await Stock.find({ status: "closing-stock" });
 
     res.status(200).json({ closingStock: updatedClosingStock });
   } catch (err) {
