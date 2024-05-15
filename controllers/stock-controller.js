@@ -504,7 +504,7 @@ export const getClosingStock = async (req, res) => {
       const lastExistingStock = await Stock.findOne({
         date: previousDate.toISOString().split("T")[0],
         status: "existing-stock",
-      }).sort({ updatedAt: -1 });
+      }).sort({ createdAt: -1 });
 
       if (lastExistingStock) {
         // Convert the last existing stock record to closing stock
