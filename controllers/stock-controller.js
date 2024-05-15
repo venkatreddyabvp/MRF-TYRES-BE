@@ -350,6 +350,7 @@ export const getOpenStock = async (req, res) => {
       const previousStock = await Stock.find({
         date: previousDate.toISOString().split("T")[0],
         status: "existing-stock",
+        location: req.body.location, // Assuming location is passed in the request body
       });
 
       if (previousStock.length > 0) {
@@ -374,34 +375,8 @@ export const getOpenStock = async (req, res) => {
           status: "open-stock",
         });
       } else {
-        // If there are no existing-stock records for the previous date, create from previous date "open-stock"
-        const previousOpenStock = await Stock.find({
-          date: previousDate.toISOString().split("T")[0],
-          status: "open-stock",
-        });
-
-        if (previousOpenStock.length > 0) {
-          // Create new open-stock records from previous open-stock records
-          for (const stock of previousOpenStock) {
-            const newStock = new Stock({
-              date: currentDate,
-              status: "open-stock",
-              quantity: stock.quantity,
-              tyreSize: stock.tyreSize,
-              SSP: stock.SSP,
-              totalAmount: stock.totalAmount,
-              pricePerUnit: stock.pricePerUnit,
-              location: stock.location,
-            });
-            await newStock.save();
-          }
-
-          // Retrieve the newly created open-stock records
-          openStock = await Stock.find({
-            date: currentDate,
-            status: "open-stock",
-          });
-        }
+        // If there are no existing-stock records for the previous date and location, return empty array
+        openStock = [];
       }
     }
 
@@ -420,6 +395,33 @@ export const getExistingStock = async (req, res) => {
       date: currentDate,
       status: "existing-stock",
     });
+
+    // If there is existing stock from the previous date, create a "closing-stock" record
+    if (existingStock.length === 0) {
+      const previousDate = new Date(currentDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const previousStock = await Stock.find({
+        date: previousDate.toISOString().split("T")[0],
+        status: "existing-stock",
+      });
+
+      if (previousStock.length > 0) {
+        // Create a "closing-stock" record with the same values as existing stock from the previous date
+        for (const stock of previousStock) {
+          const newStock = new Stock({
+            date: currentDate,
+            status: "closing-stock",
+            quantity: stock.quantity,
+            tyreSize: stock.tyreSize,
+            SSP: stock.SSP,
+            totalAmount: stock.totalAmount,
+            pricePerUnit: stock.pricePerUnit,
+            location: stock.location,
+          });
+          await newStock.save();
+        }
+      }
+    }
 
     res.status(200).json({ existingStock });
   } catch (err) {
@@ -451,5 +453,22 @@ export const getSalesRecords = async (req, res) => {
     res
       .status(400)
       .json({ message: "Failed to get sales records", error: err.message });
+  }
+};
+
+// controllers/stockController.js
+export const getClosingStock = async (req, res) => {
+  try {
+    // Find all "closing-stock" records for the current date
+    const currentDate = new Date().toISOString().split("T")[0];
+    const closingStock = await Stock.find({
+      date: currentDate,
+      status: "closing-stock",
+    });
+
+    res.status(200).json({ closingStock });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "Failed to get closing stock" });
   }
 };
