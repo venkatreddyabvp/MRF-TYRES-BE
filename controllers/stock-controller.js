@@ -309,6 +309,7 @@ export const recordSale = async (req, res) => {
       phoneNumber,
       comment,
       tyreSize,
+      location,
       user: userId,
     });
     await newSale.save();
