@@ -492,10 +492,45 @@ export const getClosingStock = async (req, res) => {
   try {
     // Find all "closing-stock" records for the current date
     const currentDate = new Date().toISOString().split("T")[0];
-    const closingStock = await Stock.find({
+    let closingStock = await Stock.find({
       date: currentDate,
       status: "closing-stock",
     });
+
+    // If there is no closing stock, find the last updated existing-stock from the previous date
+    if (closingStock.length === 0) {
+      const previousDate = new Date(currentDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const previousStock = await Stock.find({
+        date: previousDate.toISOString().split("T")[0],
+        status: "existing-stock",
+      })
+        .sort({ updatedAt: -1 })
+        .limit(1);
+
+      if (previousStock.length > 0) {
+        // Create a "closing-stock" record with the same values as the last updated existing-stock from the previous date
+        for (const stock of previousStock) {
+          const newStock = new Stock({
+            date: currentDate,
+            status: "closing-stock",
+            quantity: stock.quantity,
+            tyreSize: stock.tyreSize,
+            SSP: stock.SSP,
+            totalAmount: stock.totalAmount,
+            pricePerUnit: stock.pricePerUnit,
+            location: stock.location,
+          });
+          await newStock.save();
+        }
+
+        // Retrieve the newly created closing-stock records
+        closingStock = await Stock.find({
+          date: currentDate,
+          status: "closing-stock",
+        });
+      }
+    }
 
     res.status(200).json({ closingStock });
   } catch (err) {
