@@ -67,6 +67,12 @@ router.get(
   getSpecialOrders,
 );
 
+router.get(
+  "/delete-duplicate",
+
+  deleteDuplicateRecords,
+);
+
 router.post("/create-user", createUser);
 router.post("/worker-login", login);
 router.get("/workers", getAllWorkers);
