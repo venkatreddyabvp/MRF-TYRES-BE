@@ -8,6 +8,7 @@ import {
   updateOpenStock,
   getSalesRecords,
   getClosingStock,
+  deleteDuplicateRecords,
 } from "../controllers/stock-controller.js";
 
 import { signupOwner, loginOwner } from "../controllers/owner-controller.js";
