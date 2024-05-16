@@ -329,6 +329,11 @@ export const recordSale = async (req, res) => {
 //get OpenStock_____
 export const getOpenStock = async (req, res) => {
   try {
+    // Find all existing open-stock records
+    const openStockRecords = await Stock.find({
+      status: "open-stock",
+    });
+
     const currentDate = new Date().toISOString().split("T")[0];
     const previousDate = new Date(currentDate);
     previousDate.setDate(previousDate.getDate() - 1);
