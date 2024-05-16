@@ -384,14 +384,7 @@ export const getOpenStock = async (req, res) => {
       location: openStockRecords[0].location,
     });
 
-    // Delete duplicate open-stock records with the same date, tyreSize, and location
-    await Stock.deleteMany({
-      date: currentDate,
-      status: "open-stock",
-      tyreSize: openStockRecords[0].tyreSize,
-      location: openStockRecords[0].location,
-    });
-
+    // Send all open-stock records
     res.status(200).json({ openStock: existingOpenStock });
   } catch (err) {
     console.error(err);
