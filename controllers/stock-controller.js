@@ -342,8 +342,8 @@ export const getOpenStock = async (req, res) => {
     let closingStockPreviousDate = await Stock.find({
       date: previousDate.toISOString().split("T")[0],
       status: "closing-stock",
-      tyreSize: req.body.tyreSize,
-      location: req.body.location,
+      tyreSize: openStockRecords[0].tyreSize,
+      location: openStockRecords[0].location,
     });
 
     // If no closing-stock records found, try to create open-stock from existing-stock of the previous date
@@ -351,8 +351,8 @@ export const getOpenStock = async (req, res) => {
       const existingStockPreviousDate = await Stock.find({
         date: previousDate.toISOString().split("T")[0],
         status: "existing-stock",
-        tyreSize: req.body.tyreSize,
-        location: req.body.location,
+        tyreSize: openStockRecords[0].tyreSize,
+        location: openStockRecords[0].location,
       });
 
       if (existingStockPreviousDate.length > 0) {
@@ -380,8 +380,8 @@ export const getOpenStock = async (req, res) => {
     const existingOpenStock = await Stock.find({
       date: currentDate,
       status: "open-stock",
-      tyreSize: req.body.tyreSize,
-      location: req.body.location,
+      tyreSize: openStockRecords[0].tyreSize,
+      location: openStockRecords[0].location,
     });
 
     res.status(200).json({ openStock: existingOpenStock });
