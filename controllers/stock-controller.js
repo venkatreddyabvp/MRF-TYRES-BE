@@ -339,53 +339,48 @@ export const getOpenStock = async (req, res) => {
       status: "open-stock",
     });
 
-    if (existingOpenStock.length > 0) {
-      // If open-stock records exist for the current date, return them
-      res.status(200).json({ openStock: existingOpenStock });
-      return;
-    }
-
-    // Find all "closing-stock" records for the previous date
-    let closingStockPreviousDate = await Stock.find({
-      date: previousDate.toISOString().split("T")[0],
-      status: "closing-stock",
-    });
-
-    if (closingStockPreviousDate.length === 0) {
-      // If no closing-stock records found, try to create open-stock from existing-stock of the previous date
-      const existingStockPreviousDate = await Stock.find({
+    if (existingOpenStock.length === 0) {
+      // Find all "closing-stock" records for the previous date
+      let closingStockPreviousDate = await Stock.find({
         date: previousDate.toISOString().split("T")[0],
-        status: "existing-stock",
+        status: "closing-stock",
       });
 
-      if (existingStockPreviousDate.length > 0) {
-        // Create open-stock records from existing-stock records of the previous date
-        closingStockPreviousDate = existingStockPreviousDate.map((stock) => {
-          const newStock = new Stock({
-            date: currentDate,
-            status: "open-stock",
-            quantity: stock.quantity,
-            tyreSize: stock.tyreSize,
-            SSP: stock.SSP,
-            totalAmount: stock.totalAmount,
-            pricePerUnit: stock.pricePerUnit,
-            location: stock.location,
-          });
-          return newStock;
+      if (closingStockPreviousDate.length === 0) {
+        // If no closing-stock records found, try to create open-stock from existing-stock of the previous date
+        const existingStockPreviousDate = await Stock.find({
+          date: previousDate.toISOString().split("T")[0],
+          status: "existing-stock",
         });
 
-        // Save the open-stock records
-        await Stock.insertMany(closingStockPreviousDate);
+        if (existingStockPreviousDate.length > 0) {
+          // Create open-stock records from existing-stock records of the previous date
+          closingStockPreviousDate = existingStockPreviousDate.map((stock) => {
+            const newStock = new Stock({
+              date: currentDate,
+              status: "open-stock",
+              quantity: stock.quantity,
+              tyreSize: stock.tyreSize,
+              SSP: stock.SSP,
+              totalAmount: stock.totalAmount,
+              pricePerUnit: stock.pricePerUnit,
+              location: stock.location,
+            });
+            return newStock;
+          });
+
+          // Save the open-stock records
+          await Stock.insertMany(closingStockPreviousDate);
+        }
       }
     }
 
-    // Find and return the newly created open-stock records
-    const newOpenStock = await Stock.find({
-      date: currentDate,
+    // Find all open-stock records
+    const allOpenStock = await Stock.find({
       status: "open-stock",
     });
 
-    res.status(200).json({ openStock: newOpenStock });
+    res.status(200).json({ openStock: allOpenStock });
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: "Failed to get open stock" });
