@@ -376,10 +376,13 @@ export const getOpenStock = async (req, res) => {
     const missingOpenStock = [];
 
     missingTyreSizes.forEach((tyreSize) => {
-      missingLocations.forEach((location) => {
-        const existingStockRecord = existingStockPreviousDate.find(
-          (stock) => stock.tyreSize === tyreSize && stock.location === location,
-        );
+      missingLocations.forEach(async (location) => {
+        const existingStockRecord = await Stock.findOne({
+          date: previousDate.toISOString().split("T")[0],
+          status: "closing-stock",
+          tyreSize,
+          location,
+        });
 
         if (existingStockRecord) {
           const newStock = new Stock({
