@@ -319,11 +319,12 @@ export const getOpenStock = async (req, res) => {
 
     let openStock = [];
 
-    // Delete existing open-stock records for the current date and tyreSize
+    // Delete existing open-stock records for the current date, tyreSize, and location
     await Stock.deleteMany({
       date: currentDate,
       status: "open-stock",
       tyreSize: { $exists: true },
+      location: req.body.location,
     });
 
     // Find all "closing-stock" records for the previous date
