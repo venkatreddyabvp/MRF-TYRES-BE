@@ -542,7 +542,7 @@ export const getClosingStock = async (req, res) => {
           await newStock.save();
         }
       } else {
-        // If there is no existing-stock for the previous date, create from open-stock
+        // If there is no existing-stock for the previous date, check for open-stock
         const openStockPreviousDate = await Stock.find({
           date: previousDate.toISOString().split("T")[0],
           status: "open-stock",
@@ -563,6 +563,13 @@ export const getClosingStock = async (req, res) => {
             });
             await newStock.save();
           }
+        } else {
+          // If there are no open-stock or existing-stock records of previous date, return an error
+          return res
+            .status(404)
+            .json({
+              message: "No stock records available for the previous date",
+            });
         }
       }
     }
