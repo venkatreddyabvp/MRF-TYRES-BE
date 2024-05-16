@@ -37,6 +37,14 @@ export const addStock = async (req, res) => {
       });
     }
 
+    // Delete duplicate open-stock records for the current date, tyreSize, and location
+    await Stock.deleteMany({
+      date: new Date(date).toISOString().split("T")[0],
+      status: "open-stock",
+      tyreSize,
+      location,
+    });
+
     let previousDate = new Date(date);
     previousDate.setDate(previousDate.getDate() - 1);
     let previousStock = await Stock.findOne({
@@ -131,6 +139,14 @@ export const updateOpenStock = async (req, res) => {
     if (!["owner", "worker"].includes(role)) {
       return res.status(403).json({ message: "Forbidden" });
     }
+
+    // Delete existing open-stock records for the current date, tyreSize, and location
+    await Stock.deleteMany({
+      date,
+      status: "open-stock",
+      tyreSize,
+      location,
+    });
 
     // Find open-stock record with the same tyreSize and date
     let stock = await Stock.findOne({ date, tyreSize, status: "open-stock" });
@@ -479,6 +495,13 @@ export const getClosingStock = async (req, res) => {
     const currentDate = new Date();
     const previousDate = new Date(currentDate);
     previousDate.setDate(previousDate.getDate() - 1);
+
+    // Delete existing closing-stock records for the previous date to avoid duplicates
+    await Stock.deleteMany({
+      date: previousDate.toISOString().split("T")[0],
+      status: "closing-stock",
+    });
+
     let existingStockPreviousDate = await Stock.find({
       date: previousDate.toISOString().split("T")[0],
       status: "existing-stock",
