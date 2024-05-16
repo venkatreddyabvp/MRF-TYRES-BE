@@ -333,50 +333,76 @@ export const getOpenStock = async (req, res) => {
     const previousDate = new Date(currentDate);
     previousDate.setDate(previousDate.getDate() - 1);
 
-    // Find existing open-stock records for the current date
-    const existingOpenStock = await Stock.find({
+    // Find all distinct tyre sizes from existing open-stock records for the current date
+    const existingOpenStockTyreSizes = await Stock.distinct("tyreSize", {
       date: currentDate,
       status: "open-stock",
     });
 
-    if (existingOpenStock.length === 0) {
-      // Find all "closing-stock" records for the previous date
-      let closingStockPreviousDate = await Stock.find({
+    // Find all distinct locations from existing open-stock records for the current date
+    const existingOpenStockLocations = await Stock.distinct("location", {
+      date: currentDate,
+      status: "open-stock",
+    });
+
+    // Find all distinct tyre sizes from existing-stock records of the previous date
+    const existingStockPreviousDateTyreSizes = await Stock.distinct(
+      "tyreSize",
+      {
         date: previousDate.toISOString().split("T")[0],
-        status: "closing-stock",
-      });
+        status: "existing-stock",
+      },
+    );
 
-      if (closingStockPreviousDate.length === 0) {
-        // If no closing-stock records found, try to create open-stock from existing-stock of the previous date
-        const existingStockPreviousDate = await Stock.find({
-          date: previousDate.toISOString().split("T")[0],
-          status: "existing-stock",
-        });
+    // Find all distinct locations from existing-stock records of the previous date
+    const existingStockPreviousDateLocations = await Stock.distinct(
+      "location",
+      {
+        date: previousDate.toISOString().split("T")[0],
+        status: "existing-stock",
+      },
+    );
 
-        if (existingStockPreviousDate.length > 0) {
-          // Create open-stock records from existing-stock records of the previous date
-          closingStockPreviousDate = existingStockPreviousDate.map((stock) => {
-            const newStock = new Stock({
-              date: currentDate,
-              status: "open-stock",
-              quantity: stock.quantity,
-              tyreSize: stock.tyreSize,
-              SSP: stock.SSP,
-              totalAmount: stock.totalAmount,
-              pricePerUnit: stock.pricePerUnit,
-              location: stock.location,
-            });
-            return newStock;
+    // Get missing tyre sizes and locations
+    const missingTyreSizes = existingStockPreviousDateTyreSizes.filter(
+      (tyreSize) => !existingOpenStockTyreSizes.includes(tyreSize),
+    );
+
+    const missingLocations = existingStockPreviousDateLocations.filter(
+      (location) => !existingOpenStockLocations.includes(location),
+    );
+
+    // Create open-stock records for missing tyre sizes and locations from existing-stock of the previous date
+    const missingOpenStock = [];
+
+    missingTyreSizes.forEach((tyreSize) => {
+      missingLocations.forEach((location) => {
+        const existingStockRecord = existingStockPreviousDate.find(
+          (stock) => stock.tyreSize === tyreSize && stock.location === location,
+        );
+
+        if (existingStockRecord) {
+          const newStock = new Stock({
+            date: currentDate,
+            status: "open-stock",
+            quantity: existingStockRecord.quantity,
+            tyreSize: existingStockRecord.tyreSize,
+            SSP: existingStockRecord.SSP,
+            totalAmount: existingStockRecord.totalAmount,
+            pricePerUnit: existingStockRecord.pricePerUnit,
+            location: existingStockRecord.location,
           });
-
-          // Save the open-stock records
-          await Stock.insertMany(closingStockPreviousDate);
+          missingOpenStock.push(newStock);
         }
-      }
-    }
+      });
+    });
 
-    // Find all open-stock records
+    // Save the missing open-stock records
+    await Stock.insertMany(missingOpenStock);
+
+    // Find and return all open-stock records for the current date
     const allOpenStock = await Stock.find({
+      date: currentDate,
       status: "open-stock",
     });
 
