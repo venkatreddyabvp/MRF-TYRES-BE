@@ -8,7 +8,6 @@ import {
   updateOpenStock,
   getSalesRecords,
   getClosingStock,
-  deleteDuplicateRecords,
 } from "../controllers/stock-controller.js";
 
 import { signupOwner, loginOwner } from "../controllers/owner-controller.js";
@@ -66,12 +65,6 @@ router.get(
   "/special-reports",
 
   getSpecialOrders,
-);
-
-router.delete(
-  "/delete-duplicate",
-
-  deleteDuplicateRecords,
 );
 
 router.post("/create-user", createUser);
