@@ -491,7 +491,7 @@ export const getSalesRecords = async (req, res) => {
 // controllers/stockController.js
 export const getClosingStock = async (req, res) => {
   try {
-    // Find all "closing-stock" records
+    // Find all existing "closing-stock" records
     const closingStock = await Stock.find({ status: "closing-stock" });
 
     // Find the earliest and latest dates of closing-stock records
@@ -519,16 +519,16 @@ export const getClosingStock = async (req, res) => {
 
     // Create missing closing-stock records from open-stock if no existing stock for that date
     for (const date of missingClosingStockDates) {
-      const openStock = await Stock.find({
-        date,
-        status: "open-stock",
+      const existingStockPreviousDate = await Stock.find({
+        date: new Date(date),
+        status: "existing-stock",
       });
 
-      if (openStock.length > 0) {
-        // Create new closing-stock records from open-stock records
-        for (const stock of openStock) {
+      if (existingStockPreviousDate.length > 0) {
+        // Create new closing-stock records from existing-stock records of the previous date
+        for (const stock of existingStockPreviousDate) {
           const newStock = new Stock({
-            date,
+            date: stock.date,
             status: "closing-stock",
             quantity: stock.quantity,
             tyreSize: stock.tyreSize,
