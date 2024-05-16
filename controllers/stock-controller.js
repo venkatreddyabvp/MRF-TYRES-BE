@@ -375,30 +375,35 @@ export const getOpenStock = async (req, res) => {
     // Create open-stock records for missing tyre sizes and locations from existing-stock of the previous date
     const missingOpenStock = [];
 
-    missingTyreSizes.forEach((tyreSize) => {
-      missingLocations.forEach(async (location) => {
-        const existingStockRecord = await Stock.findOne({
-          date: previousDate.toISOString().split("T")[0],
-          status: "closing-stock",
-          tyreSize,
-          location,
-        });
+    // Use Promise.all to wait for all operations to complete
+    await Promise.all(
+      missingTyreSizes.map(async (tyreSize) => {
+        await Promise.all(
+          missingLocations.map(async (location) => {
+            const existingStockRecord = await Stock.findOne({
+              date: previousDate.toISOString().split("T")[0],
+              status: "closing-stock",
+              tyreSize,
+              location,
+            });
 
-        if (existingStockRecord) {
-          const newStock = new Stock({
-            date: currentDate,
-            status: "open-stock",
-            quantity: existingStockRecord.quantity,
-            tyreSize: existingStockRecord.tyreSize,
-            SSP: existingStockRecord.SSP,
-            totalAmount: existingStockRecord.totalAmount,
-            pricePerUnit: existingStockRecord.pricePerUnit,
-            location: existingStockRecord.location,
-          });
-          missingOpenStock.push(newStock);
-        }
-      });
-    });
+            if (existingStockRecord) {
+              const newStock = new Stock({
+                date: currentDate,
+                status: "open-stock",
+                quantity: existingStockRecord.quantity,
+                tyreSize: existingStockRecord.tyreSize,
+                SSP: existingStockRecord.SSP,
+                totalAmount: existingStockRecord.totalAmount,
+                pricePerUnit: existingStockRecord.pricePerUnit,
+                location: existingStockRecord.location,
+              });
+              missingOpenStock.push(newStock);
+            }
+          }),
+        );
+      }),
+    );
 
     // Save the missing open-stock records
     await Stock.insertMany(missingOpenStock);
