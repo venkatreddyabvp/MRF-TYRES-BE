@@ -551,7 +551,7 @@ export const getClosingStock = async (req, res) => {
   }
 };
 
-const deleteDuplicateRecords = async () => {
+export const deleteDuplicateRecords = async () => {
   try {
     // Find all unique combinations of tyreSize and location
     const uniqueCombinations = await Stock.aggregate([
