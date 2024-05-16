@@ -68,7 +68,7 @@ router.get(
   getSpecialOrders,
 );
 
-router.get(
+router.delete(
   "/delete-duplicate",
 
   deleteDuplicateRecords,
