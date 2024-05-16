@@ -384,6 +384,15 @@ export const getOpenStock = async (req, res) => {
       location: openStockRecords[0].location,
     });
 
+    // Remove duplicate open-stock records
+    await Stock.deleteMany({
+      _id: { $nin: existingOpenStock.map((stock) => stock._id) },
+      date: currentDate,
+      status: "open-stock",
+      tyreSize: openStockRecords[0].tyreSize,
+      location: openStockRecords[0].location,
+    });
+
     res.status(200).json({ openStock: existingOpenStock });
   } catch (err) {
     console.error(err);
