@@ -491,7 +491,7 @@ export const getSalesRecords = async (req, res) => {
 // controllers/stockController.js
 export const getClosingStock = async (req, res) => {
   try {
-    // Find all existing "closing-stock" records
+    // Find all "closing-stock" records
     const closingStock = await Stock.find({ status: "closing-stock" });
 
     // Find the earliest and latest dates of closing-stock records
@@ -517,10 +517,12 @@ export const getClosingStock = async (req, res) => {
       }
     }
 
-    // Create missing closing-stock records from open-stock if no existing stock for that date
+    // Create missing closing-stock records from existing-stock of previous dates
     for (const date of missingClosingStockDates) {
+      const previousDate = new Date(date);
+      previousDate.setDate(previousDate.getDate() - 1);
       const existingStockPreviousDate = await Stock.find({
-        date: new Date(date),
+        date: previousDate.toISOString().split("T")[0],
         status: "existing-stock",
       });
 
@@ -528,7 +530,7 @@ export const getClosingStock = async (req, res) => {
         // Create new closing-stock records from existing-stock records of the previous date
         for (const stock of existingStockPreviousDate) {
           const newStock = new Stock({
-            date: stock.date,
+            date,
             status: "closing-stock",
             quantity: stock.quantity,
             tyreSize: stock.tyreSize,
@@ -538,6 +540,29 @@ export const getClosingStock = async (req, res) => {
             location: stock.location,
           });
           await newStock.save();
+        }
+      } else {
+        // If there is no existing-stock for the previous date, create from open-stock
+        const openStockPreviousDate = await Stock.find({
+          date: previousDate.toISOString().split("T")[0],
+          status: "open-stock",
+        });
+
+        if (openStockPreviousDate.length > 0) {
+          // Create new closing-stock records from open-stock records of the previous date
+          for (const stock of openStockPreviousDate) {
+            const newStock = new Stock({
+              date,
+              status: "closing-stock",
+              quantity: stock.quantity,
+              tyreSize: stock.tyreSize,
+              SSP: stock.SSP,
+              totalAmount: stock.totalAmount,
+              pricePerUnit: stock.pricePerUnit,
+              location: stock.location,
+            });
+            await newStock.save();
+          }
         }
       }
     }
