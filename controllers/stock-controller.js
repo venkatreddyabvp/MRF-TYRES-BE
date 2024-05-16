@@ -349,11 +349,25 @@ export const getOpenStock = async (req, res) => {
       const closingStockPreviousDate = await Stock.find({
         date: previousDate.toISOString().split("T")[0],
         status: "closing-stock",
+        tyreSize: req.body.tyreSize,
+        location: req.body.location,
       });
 
       if (closingStockPreviousDate.length > 0) {
-        // Create open-stock records from closing-stock records of the previous date
-        for (const stock of closingStockPreviousDate) {
+        // Filter out any duplicate open-stock records from the closing-stock records
+        const filteredClosingStock = closingStockPreviousDate.filter(
+          (stock) => {
+            return !existingOpenStock.some((existingStock) => {
+              return (
+                existingStock.tyreSize === stock.tyreSize &&
+                existingStock.location === stock.location
+              );
+            });
+          },
+        );
+
+        // Create open-stock records from filtered closing-stock records of the previous date
+        for (const stock of filteredClosingStock) {
           const newStock = new Stock({
             date: currentDate,
             status: "open-stock",
