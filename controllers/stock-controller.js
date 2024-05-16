@@ -323,7 +323,6 @@ export const getOpenStock = async (req, res) => {
     const closingStockPreviousDate = await Stock.find({
       date: previousDate.toISOString().split("T")[0],
       status: "closing-stock",
-      location: req.body.location, // Assuming location is passed in the request body
     });
 
     if (closingStockPreviousDate.length > 0) {
@@ -347,7 +346,6 @@ export const getOpenStock = async (req, res) => {
       const existingStockPreviousDate = await Stock.find({
         date: previousDate.toISOString().split("T")[0],
         status: "existing-stock",
-        location: req.body.location, // Assuming location is passed in the request body
       });
 
       if (existingStockPreviousDate.length > 0) {
@@ -365,31 +363,6 @@ export const getOpenStock = async (req, res) => {
           });
           await newStock.save();
           openStock.push(newStock);
-        }
-      } else {
-        // Find all "open-stock" records for the previous date
-        const openStockPreviousDate = await Stock.find({
-          date: previousDate.toISOString().split("T")[0],
-          status: "open-stock",
-          location: req.body.location, // Assuming location is passed in the request body
-        });
-
-        if (openStockPreviousDate.length > 0) {
-          // Create open-stock records from open-stock records of the previous date
-          for (const stock of openStockPreviousDate) {
-            const newStock = new Stock({
-              date: currentDate,
-              status: "open-stock",
-              quantity: stock.quantity,
-              tyreSize: stock.tyreSize,
-              SSP: stock.SSP,
-              totalAmount: stock.totalAmount,
-              pricePerUnit: stock.pricePerUnit,
-              location: stock.location,
-            });
-            await newStock.save();
-            openStock.push(newStock);
-          }
         }
       }
     }
@@ -525,7 +498,7 @@ export const getClosingStock = async (req, res) => {
     const closingStock = [];
     for (const stock of existingStockPreviousDate) {
       const newStock = new Stock({
-        date: currentDate.toISOString().split("T")[0],
+        date: previousDate.toISOString().split("T")[0], // Set the date to previous date
         status: "closing-stock",
         quantity: stock.quantity,
         tyreSize: stock.tyreSize,
