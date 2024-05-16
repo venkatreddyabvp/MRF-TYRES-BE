@@ -333,22 +333,13 @@ export const getOpenStock = async (req, res) => {
     const previousDate = new Date(currentDate);
     previousDate.setDate(previousDate.getDate() - 1);
 
-    // Find all existing open-stock records for the current date, tyreSize, and location
+    // Find existing open-stock records for the current date, tyreSize, and location
     const existingOpenStock = await Stock.find({
       date: currentDate,
       status: "open-stock",
       tyreSize: req.body.tyreSize,
       location: req.body.location,
     });
-
-    // Delete duplicate open-stock records
-    if (existingOpenStock.length > 1) {
-      // Keep the first record and delete the rest
-      const duplicateRecords = existingOpenStock.slice(1);
-      await Stock.deleteMany({
-        _id: { $in: duplicateRecords.map((record) => record._id) },
-      });
-    }
 
     // If no existing open-stock records found, create them
     if (existingOpenStock.length === 0) {
@@ -361,8 +352,20 @@ export const getOpenStock = async (req, res) => {
       });
 
       if (closingStockPreviousDate.length > 0) {
-        // Create open-stock records from closing-stock records of the previous date
-        for (const stock of closingStockPreviousDate) {
+        // Filter out any duplicate open-stock records from the closing-stock records
+        const filteredClosingStock = closingStockPreviousDate.filter(
+          (stock) => {
+            return !existingOpenStock.some((existingStock) => {
+              return (
+                existingStock.tyreSize === stock.tyreSize &&
+                existingStock.location === stock.location
+              );
+            });
+          },
+        );
+
+        // Create open-stock records from filtered closing-stock records of the previous date
+        for (const stock of filteredClosingStock) {
           const newStock = new Stock({
             date: currentDate,
             status: "open-stock",
@@ -378,13 +381,23 @@ export const getOpenStock = async (req, res) => {
         }
       }
 
-      res.status(200).json({ openStock });
+      // Find existing open-stock records again after deletion of duplicates
+      const updatedOpenStock = await Stock.find({
+        date: currentDate,
+        status: "open-stock",
+        tyreSize: req.body.tyreSize,
+        location: req.body.location,
+      });
+
+      res.status(200).json({ openStock: updatedOpenStock });
     } else {
       res.status(200).json({ openStock: existingOpenStock });
     }
   } catch (err) {
     console.error(err);
-    res.status(400).json({ message: "Failed to get open stock" });
+    res
+      .status(500)
+      .json({ message: "Failed to get open stock", error: err.message });
   }
 };
 
