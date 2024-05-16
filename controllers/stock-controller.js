@@ -352,20 +352,8 @@ export const getOpenStock = async (req, res) => {
       });
 
       if (closingStockPreviousDate.length > 0) {
-        // Filter out any duplicate open-stock records from the closing-stock records
-        const filteredClosingStock = closingStockPreviousDate.filter(
-          (stock) => {
-            return !existingOpenStock.some((existingStock) => {
-              return (
-                existingStock.tyreSize === stock.tyreSize &&
-                existingStock.location === stock.location
-              );
-            });
-          },
-        );
-
-        // Create open-stock records from filtered closing-stock records of the previous date
-        for (const stock of filteredClosingStock) {
+        // Create open-stock records from closing-stock records of the previous date
+        for (const stock of closingStockPreviousDate) {
           const newStock = new Stock({
             date: currentDate,
             status: "open-stock",
@@ -381,23 +369,13 @@ export const getOpenStock = async (req, res) => {
         }
       }
 
-      // Find existing open-stock records again after deletion of duplicates
-      const updatedOpenStock = await Stock.find({
-        date: currentDate,
-        status: "open-stock",
-        tyreSize: req.body.tyreSize,
-        location: req.body.location,
-      });
-
-      res.status(200).json({ openStock: updatedOpenStock });
+      res.status(200).json({ openStock });
     } else {
       res.status(200).json({ openStock: existingOpenStock });
     }
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ message: "Failed to get open stock", error: err.message });
+    res.status(400).json({ message: "Failed to get open stock" });
   }
 };
 
