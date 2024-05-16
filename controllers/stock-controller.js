@@ -333,41 +333,26 @@ export const getOpenStock = async (req, res) => {
     const previousDate = new Date(currentDate);
     previousDate.setDate(previousDate.getDate() - 1);
 
-    // Find existing open-stock records for the current date, tyreSize, and location
-    const existingOpenStock = await Stock.find({
-      date: currentDate,
-      status: "open-stock",
+    // Find all "closing-stock" records for the previous date
+    let closingStockPreviousDate = await Stock.find({
+      date: previousDate.toISOString().split("T")[0],
+      status: "closing-stock",
       tyreSize: req.body.tyreSize,
       location: req.body.location,
     });
 
-    // If no existing open-stock records found, create them
-    if (existingOpenStock.length === 0) {
-      let openStock = [];
-
-      // Find all "closing-stock" records for the previous date
-      const closingStockPreviousDate = await Stock.find({
+    // If no closing-stock records found, try to create open-stock from existing-stock of the previous date
+    if (closingStockPreviousDate.length === 0) {
+      const existingStockPreviousDate = await Stock.find({
         date: previousDate.toISOString().split("T")[0],
-        status: "closing-stock",
+        status: "existing-stock",
         tyreSize: req.body.tyreSize,
         location: req.body.location,
       });
 
-      if (closingStockPreviousDate.length > 0) {
-        // Filter out any duplicate open-stock records from the closing-stock records
-        const filteredClosingStock = closingStockPreviousDate.filter(
-          (stock) => {
-            return !existingOpenStock.some((existingStock) => {
-              return (
-                existingStock.tyreSize === stock.tyreSize &&
-                existingStock.location === stock.location
-              );
-            });
-          },
-        );
-
-        // Create open-stock records from filtered closing-stock records of the previous date
-        for (const stock of filteredClosingStock) {
+      if (existingStockPreviousDate.length > 0) {
+        // Create open-stock records from existing-stock records of the previous date
+        closingStockPreviousDate = existingStockPreviousDate.map((stock) => {
           const newStock = new Stock({
             date: currentDate,
             status: "open-stock",
@@ -378,15 +363,23 @@ export const getOpenStock = async (req, res) => {
             pricePerUnit: stock.pricePerUnit,
             location: stock.location,
           });
-          await newStock.save();
-          openStock.push(newStock);
-        }
-      }
+          return newStock;
+        });
 
-      res.status(200).json({ openStock });
-    } else {
-      res.status(200).json({ openStock: existingOpenStock });
+        // Save the open-stock records
+        await Stock.insertMany(closingStockPreviousDate);
+      }
     }
+
+    // Find existing open-stock records for the current date, tyreSize, and location
+    const existingOpenStock = await Stock.find({
+      date: currentDate,
+      status: "open-stock",
+      tyreSize: req.body.tyreSize,
+      location: req.body.location,
+    });
+
+    res.status(200).json({ openStock: existingOpenStock });
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: "Failed to get open stock" });
