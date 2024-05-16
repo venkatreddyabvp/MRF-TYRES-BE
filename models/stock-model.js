@@ -11,7 +11,7 @@ const stockSchema = new mongoose.Schema({
   location: String,
   status: {
     type: String,
-    enum: ["open-stock", "existing-stock", "open-stock-day"],
+    enum: ["open-stock", "existing-stock", "open-stock-day", "closing-stock"],
     default: "open-stock",
   },
 });
