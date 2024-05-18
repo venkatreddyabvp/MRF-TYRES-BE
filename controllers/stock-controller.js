@@ -402,9 +402,8 @@ export const getOpenStock = async (req, res) => {
       }
     }
 
-    // Find and return all open-stock records for the current date
+    // Find and return all open-stock records
     const allOpenStock = await Stock.find({
-      date: currentDate,
       status: "open-stock",
     });
 
@@ -417,15 +416,19 @@ export const getOpenStock = async (req, res) => {
 
 export const getExistingStock = async (req, res) => {
   try {
-    // Find all "existing-stock" records for the current date
+    // Retrieve all "existing-stock" records
+    let allExistingStock = await Stock.find({ status: "existing-stock" });
+
+    // Get the current date
     const currentDate = new Date().toISOString().split("T")[0];
-    let existingStock = await Stock.find({
-      date: currentDate,
-      status: "existing-stock",
-    });
+
+    // Find "existing-stock" records for the current date
+    let currentExistingStock = allExistingStock.filter(
+      (stock) => stock.date === currentDate,
+    );
 
     // If there is no existing stock for the current date, create from current date "open-stock"
-    if (existingStock.length === 0) {
+    if (currentExistingStock.length === 0) {
       const openStock = await Stock.find({
         date: currentDate,
         status: "open-stock",
@@ -457,7 +460,7 @@ export const getExistingStock = async (req, res) => {
         }
 
         // Retrieve the newly created existing-stock records
-        existingStock = await Stock.find({
+        currentExistingStock = await Stock.find({
           date: currentDate,
           status: "existing-stock",
         });
@@ -465,7 +468,7 @@ export const getExistingStock = async (req, res) => {
     }
 
     // If there is existing stock from the previous date, create a "closing-stock" record
-    if (existingStock.length === 0) {
+    if (currentExistingStock.length === 0) {
       const previousDate = new Date(currentDate);
       previousDate.setDate(previousDate.getDate() - 1);
       const previousStock = await Stock.find({
@@ -500,10 +503,15 @@ export const getExistingStock = async (req, res) => {
       }
     }
 
-    res.status(200).json({ existingStock });
+    // Retrieve all "existing-stock" records again to ensure we have the latest data
+    allExistingStock = await Stock.find({ status: "existing-stock" });
+
+    res.status(200).json({ existingStock: allExistingStock });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ message: "Failed to get existing stock" });
+    res
+      .status(400)
+      .json({ message: "Failed to get existing stock", error: err.message });
   }
 };
 
@@ -536,20 +544,22 @@ export const getSalesRecords = async (req, res) => {
 // controllers/stockController.js
 export const getClosingStock = async (req, res) => {
   try {
-    // Find all "existing-stock" records of the previous date
+    // Retrieve all "closing-stock" records
+    let allClosingStock = await Stock.find({ status: "closing-stock" });
+
+    // Get the current date and the previous date
     const currentDate = new Date();
     const previousDate = new Date(currentDate);
     previousDate.setDate(previousDate.getDate() - 1);
 
-    // Find existing "closing-stock" records for the previous date
-    let existingClosingStock = await Stock.find({
-      date: previousDate.toISOString().split("T")[0],
-      status: "closing-stock",
-    });
+    // Check if there are any "closing-stock" records for the previous date
+    const existingClosingStockPreviousDate = allClosingStock.filter(
+      (stock) => stock.date === previousDate.toISOString().split("T")[0],
+    );
 
-    // If there are no existing "closing-stock" records, create from existing "existing-stock" or "open-stock" records
-    if (existingClosingStock.length === 0) {
-      let existingStockPreviousDate = await Stock.find({
+    // If there are no "closing-stock" records for the previous date, create them from existing "existing-stock" or "open-stock" records
+    if (existingClosingStockPreviousDate.length === 0) {
+      const existingStockPreviousDate = await Stock.find({
         date: previousDate.toISOString().split("T")[0],
         $or: [{ status: "existing-stock" }, { status: "open-stock" }],
       });
@@ -571,12 +581,15 @@ export const getClosingStock = async (req, res) => {
         closingStock.push(newStock);
       }
 
-      existingClosingStock = closingStock;
+      // Add the newly created "closing-stock" records to the list
+      allClosingStock = allClosingStock.concat(closingStock);
     }
 
-    res.status(200).json({ closingStock: existingClosingStock });
+    res.status(200).json({ closingStock: allClosingStock });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ message: "Failed to get closing stock" });
+    res
+      .status(400)
+      .json({ message: "Failed to get closing stock", error: err.message });
   }
 };
