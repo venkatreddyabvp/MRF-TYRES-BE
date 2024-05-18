@@ -593,3 +593,54 @@ export const getClosingStock = async (req, res) => {
       .json({ message: "Failed to get closing stock", error: err.message });
   }
 };
+const findDuplicates = async () => {
+  const duplicates = await Stock.aggregate([
+    {
+      $group: {
+        _id: {
+          date: "$date",
+          tyreSize: "$tyreSize",
+          location: "$location",
+          status: "$status",
+        },
+        uniqueIds: { $addToSet: "$_id" },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $match: {
+        count: { $gt: 1 },
+      },
+    },
+  ]);
+
+  return duplicates;
+};
+
+// Function to delete duplicates
+export const deleteDuplicateStocks = async () => {
+  try {
+    const duplicates = await findDuplicates();
+
+    if (duplicates.length === 0) {
+      console.log("No duplicates found");
+      return;
+    }
+
+    for (const record of duplicates) {
+      const { uniqueIds } = record;
+      // Keep one record and delete the rest
+      uniqueIds.shift(); // Remove the first item to keep it
+      await Stock.deleteMany({ _id: { $in: uniqueIds } });
+    }
+
+    // Recursively call the function until no duplicates are found
+    await deleteDuplicateStocks();
+  } catch (err) {
+    console.error("Failed to delete duplicate stocks", err);
+  }
+};
+
+// Example usage
+// Call this function as needed, e.g., as part of a route handler or a scheduled job
+deleteDuplicateStocks();
